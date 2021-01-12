@@ -24,6 +24,18 @@ export declare abstract class TrackUtils {
      */
     static isTrack(track: unknown): boolean;
     /**
+    * Checks if the provided track is unique.
+    * @param track
+    * @param queue
+    */
+    static isUnique(track: Track, queue: Queue): boolean;
+    /**
+    * Returns only unique tracks.
+    * @param track
+    * @param queue
+    */
+    static getUnique(track: unknown, queue: Queue): Track[];
+    /**
      * Builds a Track from the raw data from Lavalink and a optional requester.
      * @param data
      * @param requester
@@ -37,6 +49,7 @@ export declare abstract class TrackUtils {
     static buildUnresolved(query: string | UnresolvedQuery, requester?: unknown): UnresolvedTrack;
     static getClosestTrack(unresolvedTrack: UnresolvedTrack): Promise<Track>;
 }
+/** Gets or extends structures to extend the built in, or already extended, classes to add more functionality. */
 export declare abstract class Structure {
     /**
      * Extends a class.
@@ -52,6 +65,7 @@ export declare abstract class Structure {
 }
 export declare class Plugin {
     load(manager: Manager): void;
+    unload(manager: Manager): void;
 }
 export interface UnresolvedQuery {
     /** The title of the unresolved track. */

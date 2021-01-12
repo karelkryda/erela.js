@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Node = void 0;
 /* eslint-disable no-case-declarations */
 const ws_1 = __importDefault(require("ws"));
+const Utils_1 = require("./Utils");
 function check(options) {
     if (!options)
         throw new TypeError("NodeOptions must not be empty.");
@@ -35,17 +36,22 @@ function check(options) {
 class Node {
     /**
      * Creates an instance of Node.
-     * @param manager
      * @param options
      */
-    constructor(manager, options) {
-        this.manager = manager;
+    constructor(options) {
         this.options = options;
         /** The socket for the node. */
         this.socket = null;
         /** The amount of rest calls the node has made. */
         this.calls = 0;
         this.reconnectAttempts = 1;
+        if (!this.manager)
+            this.manager = Utils_1.Structure.get("Node")._manager;
+        if (!this.manager)
+            throw new RangeError("Manager has not been initiated.");
+        if (this.manager.nodes.has(options.identifier || options.host)) {
+            return this.manager.nodes.get(options.identifier || options.host);
+        }
         check(options);
         this.options = Object.assign({ port: 2333, password: "youshallnotpass", secure: false, retryAmount: 5, retryDelay: 30e3 }, options);
         this.options.identifier = options.identifier || options.host;
@@ -70,6 +76,7 @@ class Node {
                 deficit: 0,
             },
         };
+        this.manager.nodes.set(this.options.identifier, this);
         this.manager.emit("nodeCreate", this);
     }
     /** Returns if connected to the Node. */
@@ -77,6 +84,10 @@ class Node {
         if (!this.socket)
             return false;
         return this.socket.readyState === ws_1.default.OPEN;
+    }
+    /** @hidden */
+    static init(manager) {
+        this._manager = manager;
     }
     /** Connects to the Node. */
     connect() {
@@ -93,16 +104,20 @@ class Node {
         this.socket.on("message", this.message.bind(this));
         this.socket.on("error", this.error.bind(this));
     }
-    /** Destroys the Node. */
+    /** Destroys the Node and all players connected with it. */
     destroy() {
         if (!this.connected)
             return;
+        const players = this.manager.players.filter(p => p.node == this);
+        if (players.size)
+            players.forEach(p => p.destroy());
         this.socket.close(1000, "destroy");
         this.socket.removeAllListeners();
         this.socket = null;
         this.reconnectAttempts = 1;
+        clearTimeout(this.reconnectTimeout);
         this.manager.emit("nodeDestroy", this);
-        return clearTimeout(this.reconnectTimeout);
+        this.manager.destroyNode(this.options.identifier);
     }
     /**
      * Sends data to the Node.
@@ -203,7 +218,8 @@ class Node {
             this.socketClosed(player, payload);
         }
         else {
-            this.manager.emit("nodeError", this, new Error(`Node#event unknown event '${type}'.`));
+            const error = new Error(`Node#event unknown event '${type}'.`);
+            this.manager.emit("nodeError", this, error);
         }
     }
     trackStart(player, track, payload) {
@@ -212,35 +228,69 @@ class Node {
         this.manager.emit("trackStart", player, track, payload);
     }
     trackEnd(player, track, payload) {
+        // If a track had an error while starting
+        if (["LOAD_FAILED", "CLEAN_UP"].includes(payload.reason)) {
+            player.queue.previous = player.queue.current;
+            player.queue.current = player.queue.shift();
+            if (!player.queue.current)
+                return this.queueEnd(player, track, payload);
+            this.manager.emit("trackEnd", player, track, payload);
+            if (this.manager.options.autoPlay)
+                player.play();
+            return;
+        }
+        // If a track was forcibly played
         if (payload.reason === "REPLACED") {
             this.manager.emit("trackEnd", player, track, payload);
+            return;
         }
-        else if (track && player.trackRepeat) {
+        // If a track ended and is track repeating
+        if (track && player.trackRepeat) {
+            if (payload.reason === "STOPPED") {
+                player.queue.previous = player.queue.current;
+                player.queue.current = player.queue.shift();
+            }
+            if (!player.queue.current)
+                return this.queueEnd(player, track, payload);
             this.manager.emit("trackEnd", player, track, payload);
             if (this.manager.options.autoPlay)
                 player.play();
+            return;
         }
-        else if (track && player.queueRepeat) {
-            player.queue.add(track);
+        // If a track ended and is track repeating
+        if (track && player.queueRepeat) {
+            player.queue.previous = player.queue.current;
+            if (payload.reason === "STOPPED") {
+                player.queue.current = player.queue.shift();
+                if (!player.queue.current)
+                    return this.queueEnd(player, track, payload);
+            }
+            else {
+                player.queue.add(player.queue.current);
+                player.queue.current = player.queue.shift();
+            }
+            this.manager.emit("trackEnd", player, track, payload);
+            if (this.manager.options.autoPlay)
+                player.play();
+            return;
+        }
+        // If there is another song in the queue
+        if (player.queue.length) {
+            player.queue.previous = player.queue.current;
             player.queue.current = player.queue.shift();
             this.manager.emit("trackEnd", player, track, payload);
             if (this.manager.options.autoPlay)
                 player.play();
+            return;
         }
-        else if (!player.queue.length) {
-            player.queue.current = null;
-            player.playing = false;
-            // this.manager.emit("trackEnd", player, track, payload);
-            // if (["FINISHED", "STOPPED"].includes(payload.reason)) {
-            this.manager.emit("queueEnd", player);
-            // }
-        }
-        else if (player.queue.length) {
-            player.queue.current = player.queue.shift();
-            this.manager.emit("trackEnd", player, track, payload);
-            if (this.manager.options.autoPlay)
-                player.play();
-        }
+        // If there are no songs in the queue
+        if (!player.queue.length)
+            return this.queueEnd(player, track, payload);
+    }
+    queueEnd(player, track, payload) {
+        player.queue.current = null;
+        player.playing = false;
+        this.manager.emit("queueEnd", player, track, payload);
     }
     trackStuck(player, track, payload) {
         player.stop();

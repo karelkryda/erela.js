@@ -12,6 +12,8 @@ export declare class Queue extends Array<Track | UnresolvedTrack> {
     get size(): number;
     /** The current track */
     current: Track | UnresolvedTrack | null;
+    /** The previous track */
+    previous: Track | UnresolvedTrack | null;
     /**
      * Adds a track to the queue.
      * @param track
@@ -33,4 +35,6 @@ export declare class Queue extends Array<Track | UnresolvedTrack> {
     clear(): void;
     /** Shuffles the queue. */
     shuffle(): void;
+    /** Remove duplicates from the queue. */
+    removeDuplicates(): void;
 }

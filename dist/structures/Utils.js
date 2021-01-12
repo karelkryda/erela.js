@@ -10,7 +10,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Plugin = exports.Structure = exports.TrackUtils = void 0;
-const TRACK_SYMBOL = Symbol("track"), UNRESOLVED_TRACK_SYMBOL = Symbol("unresolved"), SIZES = [
+/** @hidden */
+const TRACK_SYMBOL = Symbol("track"), 
+/** @hidden */
+UNRESOLVED_TRACK_SYMBOL = Symbol("unresolved"), SIZES = [
     "0",
     "1",
     "2",
@@ -20,6 +23,7 @@ const TRACK_SYMBOL = Symbol("track"), UNRESOLVED_TRACK_SYMBOL = Symbol("unresolv
     "hqdefault",
     "maxresdefault",
 ];
+/** @hidden */
 const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 class TrackUtils {
     /** @hidden */
@@ -67,6 +71,37 @@ class TrackUtils {
         if (typeof track === "undefined")
             throw new RangeError("Provided argument must be present.");
         return track[TRACK_SYMBOL] === true;
+    }
+    /**
+    * Checks if the provided track is unique.
+    * @param track
+    * @param queue
+    */
+    static isUnique(track, queue) {
+        if (typeof track === "undefined")
+            throw new RangeError("Provided argument (track) must be present.");
+        if (typeof queue === "undefined")
+            throw new RangeError("Provided argument (queue) must be present.");
+        if (Array.isArray(track))
+            throw new RangeError('Track must be a "Track", not "Track[]".');
+        if (queue.size == 0)
+            return true;
+        return queue.filter(p => {
+            if (p.uri === undefined)
+                return p.title === track.title;
+            else
+                return p.uri === track.uri;
+        }).length === 0;
+    }
+    /**
+    * Returns only unique tracks.
+    * @param track
+    * @param queue
+    */
+    static getUnique(track, queue) {
+        if (!Array.isArray(track))
+            throw new RangeError('Track must be "Track[]", not "Track".');
+        return track.filter(track => !queue.find(ext => TrackUtils.isUnresolvedTrack(track) ? track.title === ext.title : track.identifier === ext.identifier));
     }
     /**
      * Builds a Track from the raw data from Lavalink and a optional requester.
@@ -147,6 +182,8 @@ class TrackUtils {
     static getClosestTrack(unresolvedTrack) {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            if (!TrackUtils.manager)
+                throw new RangeError("Manager has not been initiated.");
             if (!TrackUtils.isUnresolvedTrack(unresolvedTrack))
                 throw new RangeError("Provided track is not a UnresolvedTrack.");
             const query = [unresolvedTrack.author, unresolvedTrack.title].filter(str => !!str).join(" - ");
@@ -177,6 +214,7 @@ class TrackUtils {
 }
 exports.TrackUtils = TrackUtils;
 TrackUtils.trackPartial = null;
+/** Gets or extends structures to extend the built in, or already extended, classes to add more functionality. */
 class Structure {
     /**
      * Extends a class.
@@ -203,8 +241,8 @@ class Structure {
 }
 exports.Structure = Structure;
 class Plugin {
-    load(manager) {
-    }
+    load(manager) { }
+    unload(manager) { }
 }
 exports.Plugin = Plugin;
 const structures = {

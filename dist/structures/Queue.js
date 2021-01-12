@@ -11,6 +11,8 @@ class Queue extends Array {
         super(...arguments);
         /** The current track */
         this.current = null;
+        /** The previous track */
+        this.previous = null;
     }
     /** The total duration of the queue. */
     get duration() {
@@ -94,6 +96,20 @@ class Queue extends Array {
             const j = Math.floor(Math.random() * (i + 1));
             [this[i], this[j]] = [this[j], this[i]];
         }
+    }
+    /** Remove duplicates from the queue. */
+    removeDuplicates() {
+        if (this.totalSize == 0)
+            throw new RangeError(`The queue must not be empty`);
+        else if (this.totalSize < 2)
+            throw new RangeError(`The queue must contain more than one song`);
+        const tracks = this.reduce((accumulator, currentValue) => {
+            if (!accumulator.find(obj => obj["title"] === currentValue["title"]))
+                accumulator.push(currentValue);
+            return accumulator;
+        }, []);
+        this.clear();
+        this.add(tracks);
     }
 }
 exports.Queue = Queue;
