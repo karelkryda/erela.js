@@ -86,12 +86,7 @@ class TrackUtils {
             throw new RangeError('Track must be a "Track", not "Track[]".');
         if (queue.size == 0)
             return true;
-        return queue.filter(p => {
-            if (p.uri === undefined)
-                return p.title === track.title;
-            else
-                return p.uri === track.uri;
-        }).length === 0;
+        return queue.filter(p => TrackUtils.isUnresolvedTrack(track) || TrackUtils.isUnresolvedTrack(p) ? track.title === p.title : track.identifier === p.identifier).length === 0;
     }
     /**
     * Returns only unique tracks.
@@ -101,7 +96,7 @@ class TrackUtils {
     static getUnique(track, queue) {
         if (!Array.isArray(track))
             throw new RangeError('Track must be "Track[]", not "Track".');
-        return track.filter(track => !queue.find(ext => TrackUtils.isUnresolvedTrack(track) ? track.title === ext.title : track.identifier === ext.identifier));
+        return track.filter(track => !queue.find(ext => TrackUtils.isUnresolvedTrack(track) || TrackUtils.isUnresolvedTrack(ext) ? track.title === ext.title : track.identifier === ext.identifier));
     }
     /**
      * Builds a Track from the raw data from Lavalink and a optional requester.
