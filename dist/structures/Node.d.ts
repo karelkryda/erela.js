@@ -61,6 +61,8 @@ export interface NodeOptions {
     retryAmount?: number;
     /** The retryDelay for the node. */
     retryDelay?: number;
+    /** Regions for which the node can be used */
+    region?: string | string[];
 }
 export interface NodeStats {
     /** The amount of players on the node. */

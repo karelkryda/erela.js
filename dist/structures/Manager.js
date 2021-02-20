@@ -50,8 +50,8 @@ function check(options) {
 class Manager extends events_1.EventEmitter {
     /**
      * Initiates the Manager class.
-     * @param options
-     */
+   * @param options
+   */
     constructor(options) {
         super();
         /** The map of players. */
@@ -89,6 +89,44 @@ class Manager extends events_1.EventEmitter {
     /** Returns the least system load Nodes. */
     get leastLoadNodes() {
         return this.nodes
+            .filter((node) => node.connected)
+            .sort((a, b) => {
+            const aload = a.stats.cpu
+                ? (a.stats.cpu.systemLoad / a.stats.cpu.cores) * 100
+                : 0;
+            const bload = b.stats.cpu
+                ? (b.stats.cpu.systemLoad / b.stats.cpu.cores) * 100
+                : 0;
+            return aload - bload;
+        });
+    }
+    /**
+     * Returns the Node in same region as server.
+     * @param region
+     */
+    nearestNode(region) {
+        const nodes = this.nodes
+            .filter((node) => {
+            if (!node.options.region)
+                return node.connected;
+            else if (Array.isArray(node.options.region))
+                return node.connected && node.options.region.includes(region);
+            else
+                return node.connected && node.options.region.toLowerCase() == region.toLowerCase();
+        });
+        if (!nodes)
+            return null;
+        else if (nodes.size === 1)
+            return nodes.first();
+        else if (nodes.size > 1)
+            return this.leastLoadNodesByRegion(nodes).first();
+    }
+    /**
+     * Returns the least system load Nodes from provided Nodes.
+     * @param nodes
+     */
+    leastLoadNodesByRegion(nodes) {
+        return nodes
             .filter((node) => node.connected)
             .sort((a, b) => {
             const aload = a.stats.cpu
