@@ -16,6 +16,8 @@ function check(options) {
         throw new TypeError("PlayerOptions must not be empty.");
     if (!/^\d+$/.test(options.guild))
         throw new TypeError('Player option "guild" must be present and be a non-empty string.');
+    if (options.region && !/^\d+$/.test(options.region))
+        throw new TypeError('Player option "region" must be a non-empty string.');
     if (options.textChannel && !/^\d+$/.test(options.textChannel))
         throw new TypeError('Player option "textChannel" must be a non-empty string.');
     if (options.voiceChannel && !/^\d+$/.test(options.voiceChannel))
@@ -52,6 +54,8 @@ class Player {
         this.playing = false;
         /** Whether the player is paused. */
         this.paused = false;
+        /** The region of Discord server. */
+        this.region = null;
         /** The voice channel for the player. */
         this.voiceChannel = null;
         /** The text channel for the player. */
@@ -77,7 +81,12 @@ class Player {
         if (options.textChannel)
             this.textChannel = options.textChannel;
         const node = this.manager.nodes.get(options.node);
-        this.node = node || this.manager.leastLoadNodes.first();
+        if (node)
+            this.node = node;
+        else if (options.region)
+            this.node = this.manager.nearestNode(options.region);
+        if (!this.node)
+            this.node = this.manager.leastLoadNodes.first();
         if (!this.node)
             throw new RangeError("No available nodes.");
         this.manager.players.set(options.guild, this);

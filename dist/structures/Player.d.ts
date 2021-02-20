@@ -22,6 +22,8 @@ export declare class Player {
     node: Node;
     /** The guild the player. */
     guild: string;
+    /** The region of Discord server. */
+    region: string | null;
     /** The voice channel for the player. */
     voiceChannel: string | null;
     /** The text channel for the player. */
@@ -132,6 +134,8 @@ export declare class Player {
 export interface PlayerOptions {
     /** The guild the Player belongs to. */
     guild: string;
+    /** The region of Discord server. */
+    region?: string;
     /** The text channel the Player belongs to. */
     textChannel: string;
     /** The voice channel the Player belongs to. */
