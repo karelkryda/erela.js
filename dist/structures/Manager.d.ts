@@ -109,12 +109,12 @@ export declare class Manager extends EventEmitter {
      * Returns the Node in same region as server.
      * @param region
      */
-    nearestNode(region: any): Node;
+    nearestNode(region: string): Node;
     /**
      * Returns the least system load Nodes from provided Nodes.
      * @param nodes
      */
-    leastLoadNodesByRegion(nodes: any): Collection<string, Node>;
+    leastLoadNodesByRegion(nodes: Collection<string, Node>): Collection<string, Node>;
     /**
      * Initiates the Manager class.
    * @param options
